@@ -2,7 +2,7 @@
 
 	"Grabcut in One Cut"
 	Meng Tang, Lena Gorelick, Olga Veksler, Yuri Boykov
-	In IEEE International Conference on Computer Vision (ICCV), 2013.
+	In IEEE International Conference on Computer Vision (ICCV), Sydney, Australia, Dec. 2013.
 
 Contact author: Meng Tang (mtang73@uwo.ca)
 
