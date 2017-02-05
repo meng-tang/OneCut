@@ -1,0 +1,116 @@
+#include "EasyBMP/EasyBMP.h"
+
+template <class T>
+Table2D<T> loadImage(const char * bmp_file_name) {
+    BMP im;
+    if(!(im.ReadFromFile(bmp_file_name)))  // loading new image
+    {
+        printf("can't open image %s\n",bmp_file_name);
+        cout<<"File info: "<<endl;
+	    cout<<im.TellWidth()<<" x "<<im.TellHeight()
+	    <<" at "<<im.TellBitDepth()<<" bpp"<<endl;
+        return Table2D<T>(); // return empty Table2D
+    }
+    unsigned int x, y;
+    int bytes = (int)(im.TellBitDepth())/8;
+    Table2D<T> arr(im.TellWidth(),im.TellHeight()); 
+    for (x=0; x<arr.getWidth(); x++) 
+    {
+        unsigned  height = arr.getHeight(); // length of each column in "arr"
+        for (y=0; y<height; y++) 
+        { 
+            if(bytes==1)
+                arr[x][y] = (T) RGB(im(x,y)->Red,im(x,y)->Red,im(x,y)->Red);
+            else if (bytes==3 || bytes==4) 
+                arr[x][y] = (T) RGB(im(x,y)->Red,im(x,y)->Green,im(x,y)->Blue);
+        } // uses cast operators "(type) RGB", see Image2D.h 
+    }
+    return arr;
+}
+
+
+template <class T>
+bool saveImage(const Table2D<T>& arr, const char * bmp_file_name)
+{return saveImage(arr,Casting(),bmp_file_name);}
+
+template<class T, class ConversionToRGB>
+bool saveImage(const Table2D<T>& arr, const ConversionToRGB& f, const char * bmp_file_name)
+{
+    if (arr.isEmpty()) return false;
+    unsigned int x, y;
+    RGB c;
+    BMP im;
+    im.SetSize(arr.getWidth(),arr.getHeight());
+    for (x=0; x<arr.getWidth(); x++) 
+    {
+        unsigned  height = arr.getHeight(); // length of each column in "arr"
+        for (y=0; y<height; y++) 
+        {
+            f.convert(c,arr[x][y]); // "arr_column[y]" is equivalent to "arr[x][y]" 
+            im(x,y)->Blue=c.b; // [0] is blue
+            im(x,y)->Green=c.g; // [1] is green
+            im(x,y)->Red=c.r; // [2] is red
+        }
+    }
+    return im.WriteToFile(bmp_file_name);
+}
+
+template<class T, class ConversionToRGB>
+bool saveImage(const Table2D<T>& arr, const ConversionToRGB& f, const Table2D<double>& alpha_mat, const char * bmp_file_name)
+{
+    if (arr.isEmpty()) return false;
+    unsigned int x, y;
+    RGB c;
+    BMP im;
+    im.SetSize(arr.getWidth(),arr.getHeight());
+    for (x=0; x<arr.getWidth(); x++) 
+    {
+        unsigned  height = arr.getHeight(); // length of each column in "arr"
+        for (y=0; y<height; y++) 
+        {
+            f.convert(c,arr[x][y]); // "arr_column[y]" is equivalent to "arr[x][y]" 
+            im(x,y)->Blue=c.b; // [0] is blue
+            im(x,y)->Green=c.g; // [1] is green
+            im(x,y)->Red=c.r; // [2] is red
+            im(x,y)->Alpha=(unsigned char )(alpha_mat[x][y]*255.0); // [2] is red
+        }
+    }
+    return im.WriteToFile(bmp_file_name);
+}
+
+
+template <class T> 
+void splitRGB(const Table2D<RGB>& src, Table2D<T>& R, Table2D<T>& G, Table2D<T>& B)
+{
+    unsigned w = src.getWidth(), h = src.getHeight();
+    R.resize(w,h);
+    G.resize(w,h);
+    B.resize(w,h);
+    if (!src.isEmpty()) for (unsigned x=0; x<w; x++) 
+    {
+        T* colR   = R[x];
+        T* colG   = G[x];
+        T* colB   = B[x];
+        RGB* src_col = src[x];
+        for (unsigned y=0; y<h; y++) {colR[y] = (T) src_col[y].r; colG[y] = (T) src_col[y].g; colB[y] = (T) src_col[y].b;}
+     }
+}
+
+template <class T> 
+Table2D<RGB> combineRGB(const Table2D<T>& R, const Table2D<T>& G, const Table2D<T>& B)
+{
+    Table2D<RGB> trg;
+    unsigned w = R.getWidth(), h = R.getHeight();
+    Assert(w==G.getWidth() && w==B.getWidth(),"Tables of different width (in combineRGB)");
+    Assert(h==G.getHeight() && h==B.getHeight(),"Tables of different height (in combineRGB)");
+    trg.resize(w,h);
+    if (!trg.isEmpty()) for (unsigned x=0; x<w; x++) 
+    {
+        T* colR   = R[x];
+        T* colG   = G[x];
+        T* colB   = B[x];
+        RGB* trg_col = trg[x];
+        for (unsigned y=0; y<h; y++) trg_col[y] = RGB(fit(colR[y]),fit(colG[y]),fit(colB[y])); 
+     }
+     return trg;
+}

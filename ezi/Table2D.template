@@ -1,0 +1,401 @@
+#include "myassert.h"
+
+// An implementation of templated class "Table2D"
+template <class T>
+Table2D<T> :: Table2D() 
+: m_container(NULL), m_width(0), m_height(0) {} 
+
+template <class T>
+Table2D<T> :: Table2D(unsigned width, unsigned height) 
+: m_container(NULL) {resize(width,height);} 
+
+template <class T>
+Table2D<T> :: Table2D(unsigned width, unsigned height, T val) 
+: m_container(NULL) {reset(width,height,val);} 
+
+template <class T> // copy constructor
+Table2D<T> :: Table2D(const Table2D<T>& src) 
+: m_container(NULL) { 
+    resize(src.m_width,src.m_height);
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] = src.m_container[i];
+}
+
+template <class T> template <class type>
+Table2D<T> :: Table2D(const Table2D<type>& src) // conversion constructor (by casting)
+: m_container(NULL) {
+    resize(src.getWidth(),src.getHeight());
+    if (!isEmpty()) for (unsigned x=0; x<m_width; x++) {
+        T*  col_ptr = (*this)[x];
+        type* col_ptr_src = src[x];
+        for (unsigned y=0; y<m_height; y++) col_ptr[y] = (T) col_ptr_src[y];
+    }
+}
+
+template <class T>
+Table2D<T>&  Table2D<T> :: operator=(const Table2D<T>& src) // copy operator
+{
+    resize(src.m_width,src.m_height);
+    if (!isEmpty()) for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] = src.m_container[i];
+    return *this;
+}
+
+template <class T>
+bool  Table2D<T> :: operator==(const Table2D<T>& src) // isequal operator
+{
+    if (!isEmpty()) 
+	for (unsigned i=0; i<(m_width*m_height); i++) 
+	{
+		if(m_container[i] != src.m_container[i])
+		return false;
+	}
+    return true;
+}
+
+
+template <class T> template <class type>       
+Table2D<T>& Table2D<T> :: operator=(const Table2D<type>& src)   // conversion operator (by casting)
+{
+    resize(src.getWidth(),src.getHeight());
+    if (!isEmpty()) for (unsigned x=0; x<m_width; x++) {
+        T*  col_ptr = (*this)[x];
+        type* col_ptr_src = src[x];
+        for (unsigned y=0; y<m_height; y++) col_ptr[y] = (T) col_ptr_src[y];
+    }
+    return *this;
+}
+
+template <class T>
+Table2D<T> :: ~Table2D() {if (m_container) delete[] m_container;}
+
+
+template <class T>
+T* Table2D<T> :: operator[](unsigned x) const
+{
+    Assert( x<m_width, "Table2D index is out of bounds (in operator[](unsigned x))" );
+    return m_container + x*m_height;
+}
+
+template <class T>
+T* Table2D<T> :: operator[](int x) const
+{
+    Assert(0<=x && ((unsigned)x)<m_width,"Table2D index is out of bounds (in operator[](int x))");
+    return m_container + ((unsigned)x)*m_height;
+}
+
+template <class T>
+T& Table2D<T> :: operator[](Point p) const
+{
+    Assert(pointIn(p),"Table2D point is out of bounds (in operator[](Point p))");		
+    return m_container[((unsigned)p.y)+((unsigned)p.x)*m_height];
+} 
+
+
+template <class T>
+Table2D<T>& Table2D<T> :: resize(unsigned width, unsigned height) 
+{
+    if (m_container) delete m_container;
+    m_width = width;
+    m_height = height;
+    if ((m_width*m_height)==0) m_container=NULL; 
+    else m_container = new T[m_width*m_height];
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: resize(const int zoom)
+{
+    unsigned x,y, size, W, H, s;
+    if      (zoom>0) {s =  zoom; W = m_width*s; H = m_height*s;}
+    else if (zoom<0) {s = -zoom; W = m_width/s; H = m_height/s;}
+    else             {s = 0;     W = 0;         H = 0;}
+    size = W*H;
+    T *old_cont=m_container, *new_cont = NULL;
+    if (size>0) new_cont = new T[size];    
+    if      (zoom>0) {for (x=0; x<W; x++) for (y=0; y<H; y++) new_cont[y+x*H] = (*this)[x/s][y/s];} 
+    else if (zoom<0) {for (x=0; x<W; x++) for (y=0; y<H; y++) new_cont[y+x*H] = (*this)[x*s][y*s];}
+    m_container = new_cont;
+    m_width=W;
+    m_height=H;
+    if (old_cont) delete [] old_cont;
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: reset(T val) 
+{ 
+    if (m_container) for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] = val; 
+    return (*this);
+}
+
+template <class T>
+T * Table2D<T> :: copytoArray() 
+{ 
+	T * a = new T[m_width*m_height];
+    if (m_container) for (unsigned i=0; i<(m_width*m_height); i++) a[i] = m_container[i]; 
+    return a;
+}
+
+template <class T> 
+T Table2D<T> :: getMin() const
+{
+    Assert(!isEmpty(),"empty table (in getMin)");
+    T current_min = m_container[0];
+    for (unsigned i=1; i<(m_width*m_height); i++) if (m_container[i] < current_min) current_min = m_container[i]; 
+    return current_min;
+}
+
+template <class T> 
+T Table2D<T> :: getMean() const
+{
+    Assert(!isEmpty(),"empty table (in getMin)");
+    double current_sum = m_container[0];
+    for (unsigned i=1; i<(m_width*m_height); i++) current_sum += (double)(m_container[i]); 
+    return current_sum/m_width/m_height;
+}
+
+template <class T> 
+T Table2D<T> :: getMax() const
+{
+    Assert(!isEmpty(),"empty table (in getMax)");
+    T current_max = m_container[0];
+    for (unsigned i=1; i<(m_width*m_height); i++) if (m_container[i] > current_max) current_max = m_container[i]; 
+    return current_max;
+}
+
+template <class T> 
+T Table2D<T> :: sum() const
+{
+    Assert(!isEmpty(),"empty table (in getMax)");
+    T current_sum = m_container[0];
+    for (unsigned i=1; i<(m_width*m_height); i++) current_sum = current_sum + m_container[i]; 
+    return current_sum;
+}
+
+template <class T> 
+T Table2D<T> :: sum(Table2D<bool> ROI) const
+{
+    Assert(!isEmpty(),"empty table (in getMax)");
+    T current_sum = T();
+	for(unsigned x=0;x<m_width;x++){
+		for(unsigned y=0;y<m_height;y++){
+			if(ROI[x][y])
+			current_sum = current_sum + m_container[x*m_height+y]; 
+		}
+	}
+    return current_sum;
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator+=(const Table2D<T>& arg) // adding another Table2D
+{
+    Assert( m_width==arg.getWidth() && m_height==arg.getHeight(),"Table2D of different size (in operator+=)");
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] += arg.m_container[i];
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator-=(const Table2D<T>& arg) // subtracting another Table2D
+{
+    Assert( m_width==arg.getWidth() && m_height==arg.getHeight(),"Table2D of different size (in operator-=)");
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] -= arg.m_container[i];
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator+=(const T& val) // adding a constant to each element
+{
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] += val;
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator-=(const T& val) // subtracting a constant from each element
+{
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] -= val;
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator*=(const double& scalar) // multiplication by a scalar 
+{
+    for (unsigned i=0; i<(m_width*m_height); i++) m_container[i] *= scalar;
+    return (*this);
+}
+
+template <class T>
+Table2D<T>& Table2D<T> :: operator%=(const Table2D<double>& arg) // POINTWISE scaling 
+{
+    Assert( m_width==arg.getWidth() && m_height==arg.getHeight(),"Table2D of different size (in point_prod)");
+    for (unsigned x=0; x<m_width; x++) {
+        T* col = (*this)[x];
+        double* arg_col = arg[x];
+        for (unsigned y=0; y<m_height; y++) col[y] *= arg_col[y];
+    }
+    return (*this);
+}
+
+template <class T>
+Table2D<T> Table2D<T> :: operator~() const // computes matrix transpose
+{
+    Table2D<T> result(m_height,m_width);
+    for (unsigned i=0; i<(m_width*m_height); i++) result.m_container[i] = m_container[(i/m_width) +  (i%m_width)*m_height];  
+    return result;
+}
+
+template <class T> template <class type>
+void Table2D<T> :: convertTo(Table2D<type>& trg, type (*f)(T item)) const
+{
+    trg.resize(m_width,m_height);
+    if (!trg.isEmpty()) for (unsigned x=0; x<m_width; x++) 
+    {
+         T* my_col   = (*this)[x];
+         type* trg_col = trg[x];
+         for (unsigned y=0; y<m_height; y++) trg_col[y]=f(my_col[y]); 
+    }
+}
+
+template <class T> template<class type, class Conversion>
+void Table2D<T> :: convertTo(Table2D<type>& trg, const Conversion& f) const 
+{
+    trg.resize(m_width,m_height);
+    if (!trg.isEmpty()) for (unsigned x=0; x<m_width; x++) 
+    {
+         T* my_col   = (*this)[x];
+         type* trg_col = trg[x];
+         for (unsigned y=0; y<m_height; y++) f.convert(trg_col[y],my_col[y]); 
+    }
+}
+
+template <class T> template <class type>
+void Table2D<T> :: convertTo(Table2D<type>& trg, const double new_min, const double new_max) const
+{
+    if (isEmpty()) trg.resize(getWidth(),getHeight());
+    double old_min = (double)getMin();
+    double old_max = (double)getMax();
+    double gain = 1;
+    double bias = (new_min+new_max)/2.0-old_min;
+    if (old_min < old_max) {
+        gain = (new_max-new_min)/(old_max-old_min); 
+        bias=new_min-old_min*gain;
+    }
+    convertTo(trg,Scaling(gain,bias));
+}
+
+template <class type, class T> 
+Table2D<type> convert(const Table2D<T>& src, type (*f) (T)) 
+{
+    Table2D<type> result;
+    src.convertTo(result,f);
+    return result;
+}
+
+template <class type, class T, class Conversion>  
+Table2D<type> convert(const Table2D<T>& src, const Conversion& f) 
+{
+    Table2D<type> result;
+    src.convertTo(result,f);
+    return result;
+}
+
+template <class type, class T>
+Table2D<type> convert(const Table2D<T>& src, const double new_min, const double new_max) {
+    Table2D<type> result;
+    src.convertTo(result,new_min,new_max);
+    return result;
+}
+
+template <class T> 
+Table2D<T> crop(const Table2D<T>& src, const Point corner1, const Point corner2)
+{
+    Assert( src.pointIn(corner1) || src.pointIn(corner2),"corner points are out of range (in 'crop')");
+    unsigned left, right, top, bottom;
+    if (corner1.x <= corner2.x) {left = corner1.x; right = corner2.x;}
+    else                        {left = corner2.x; right = corner1.x;}
+    if (corner1.y <= corner2.y) {top = corner1.y; bottom = corner2.y;}
+    else                        {top = corner2.y; bottom = corner1.y;}
+    unsigned width = right - left + 1;
+    unsigned height = bottom - top + 1;
+    Table2D<T> result(width,height);
+    for (unsigned x=left; x<=right; x++) for (unsigned y=top; y<=bottom; y++)
+         result[x-left][y-top]=src[x][y];
+    return result; 
+}
+
+template <class T>
+Table2D<T> operator*(const Table2D<T>& a, const double& scalar)
+{
+    Table2D<T> result( a );
+    return  result*= scalar;
+}
+
+template <class T>
+Table2D<T> operator*(const double& scalar, const Table2D<T>& a)
+{
+    Table2D<T> result( a );
+    return  result*= scalar;
+}
+
+template <class T>
+Table2D<T> operator+(const Table2D<T>& a, const double& val)
+{
+    Table2D<T> result( a );
+    return  result+= (T) val;
+}
+
+template <class T>
+Table2D<T> operator+(const double& val, const Table2D<T>& a)
+{
+    Table2D<T> result( a );
+    return  result+= (T) val;
+}
+
+template <class T>
+Table2D<T> operator-(const Table2D<T>& a, const double& val) 
+{
+    Table2D<T> result( a );
+    return  result-= (T) val;
+}
+
+template <class T>
+Table2D<T> operator-(const double& val, const Table2D<T>& a) 
+{
+    Table2D<T> result(a.getWidth(), a.getHeight(), (T) val);
+    return  result-= a;
+}
+
+template <class T>
+Table2D<T> operator+(const Table2D<T>& a, const Table2D<T>& b)
+{
+    Assert( a.getWidth()==b.getWidth() && a.getHeight()==b.getHeight(),"Adding 2 arrays of different size (in operator+)");
+    Table2D<T> result( a );
+    return  result+=b;
+}
+
+template <class T>
+Table2D<T> operator-(const Table2D<T>& a, const Table2D<T>& b)
+{
+    Assert( a.getWidth()==b.getWidth() && a.getHeight()==b.getHeight(),"Adding 2 arrays of different size (in operator-)");
+    Table2D<T> result( a );
+    return  result-=b;
+}
+
+template <class T>
+Table2D<T> operator*(const Table2D<T>& a, const Table2D<T>& b)
+{    
+    Assert(!a.isEmpty() && !b.isEmpty(),"an empty matrix (in operator*)");
+    Assert(a.getWidth()==b.getHeight(),"a.width is not equal to b.height (in operator*)");
+    Table2D<T> result( b.getWidth(), a.getHeight() );
+    for (int x=0; x<result.getWidth(); x++) for (int y=0; y<result.getHeight(); y++) {
+        result[x][y] = a[0][y]*b[x][0];
+        for (int t=1; t<a.getWidth(); t++) result[x][y]  += a[t][y]*b[x][t];
+    }
+    return  result;
+}
+
+template <class T>
+Table2D<T> operator%(const Table2D<T>& a, const Table2D<double>& s)
+{
+    Assert( a.getWidth()==s.getWidth() && a.getHeight()==s.getHeight(),"POINTWISE multiplication of 2 arrays of different size (in point_prod)");
+    Table2D<T> result( a );
+    return  result%=s;
+} 
