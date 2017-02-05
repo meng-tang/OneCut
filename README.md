@@ -6,7 +6,7 @@
 
 Contact author: Meng Tang (mtang73@uwo.ca)
 
-Example output of OneCut for interactive segmentation in a fraction of a second:<br />
+Example output of OneCut for interactive segmentation in a fraction of a second:<br /><br />
 <span><img src="images/326038.bmp" alt="" width="350"/>
 <img src="images/326038_result.bmp" alt="" width="350"/></span>
 ```{r, engine='bash'}
