@@ -25,3 +25,6 @@ errornum / boxsize 1775 58608
 errorrate: 0.030286
 ```
 Note that for solving maxflow in OneCut, we recommend the [IBFS](http://www.cs.tau.ac.il/~sagihed/ibfs/code.html) algorithm.
+
+##License and CopyRight##
+See [LICENSE](LICENSE)
